@@ -33,3 +33,21 @@ Check `dotnet --info` again and you should see `6.0.110 [/usr/lib/dotnet/dotnet6
 installed.
 
 ## Running the project
+
+First go into the project's folder
+
+```sh
+cd ArxLibertatisServer
+```
+
+### Compiling
+
+```sh
+dotnet run
+```
+
+### Running
+
+```sh
+dotnet bin/Debug/netcoreapp3.1/ArxLibertatisServer.dll
+```
