@@ -1,4 +1,5 @@
 ﻿using ArxLibertatisServer.Messages;
+using ArxLibertatisServer.Messages.Outgoing;
 using ArxLibertatisServer.Util;
 using NLog;
 using System;
@@ -29,6 +30,7 @@ namespace ArxLibertatisServer
 
         public Server(IPEndPoint endpoint)
         {
+            logger.Info("Creating Server with endpoint " + endpoint);
             listener = new TcpListenerEx(endpoint);
         }
 
@@ -36,7 +38,7 @@ namespace ArxLibertatisServer
         {
             if (!listener.Active)
             {
-                logger.Info("Starting Server on " + listener.LocalEndpoint);
+                logger.Info("Starting Server listening on " + listener.LocalEndpoint);
                 listener.Start();
                 listener.BeginAcceptSocket(AcceptClient, listener);
             }
@@ -46,6 +48,7 @@ namespace ArxLibertatisServer
         {
             if (listener.Active)
             {
+                logger.Info("Stopping Server");
                 listener.Stop();
             }
         }
@@ -54,6 +57,7 @@ namespace ArxLibertatisServer
         {
             var list = ar.AsyncState as TcpListenerEx;
             var tcpClient = list.EndAcceptTcpClient(ar);
+            logger.Info("Server got new client " + tcpClient.Client.RemoteEndPoint);
             var client = new Client(this, tcpClient);
             lock (clients)
             {
@@ -65,6 +69,12 @@ namespace ArxLibertatisServer
 
         public void DisconnectClient(Client client)
         {
+            logger.Info("Disconnecting client " + client.Id);
+            var clientExit = new AnnounceClientExit
+            {
+                id = client.Id
+            };
+            Broadcast(clientExit, client);
             lock (clients)
             {
                 clients.Remove(client);
@@ -86,7 +96,7 @@ namespace ArxLibertatisServer
         /// </summary>
         /// <param name="message"></param>
         /// <param name="exceptFor"></param>
-        public void Broadcast(Message message, Client exceptFor = null)
+        public void Broadcast(OutgoingMessage message, Client exceptFor = null)
         {
             lock (clients)
             {

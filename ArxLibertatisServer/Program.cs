@@ -11,6 +11,8 @@ namespace ArxLibertatisServer
 {
     public class Program
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
         public static readonly CommandLineArgs cmdLineArgs = new CommandLineArgs();
 
         static void Main(string[] args)
@@ -34,7 +36,7 @@ namespace ArxLibertatisServer
             var consoleTarget = new ConsoleTarget
             {
                 Name = "console",
-                Layout = "${longdate}|${level:uppercase=true}|${logger}|${message}",
+                Layout = "${longdate}|${level:uppercase=true}|${logger}|${message}|${exception:format=tostring}",
             };
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, consoleTarget, "*");
             LogManager.Configuration = config;

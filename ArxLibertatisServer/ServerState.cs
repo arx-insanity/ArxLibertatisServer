@@ -2,6 +2,6 @@
 {
     public class ServerState
     {
-        public long level;
+        public int level;
     }
 }

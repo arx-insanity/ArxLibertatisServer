@@ -1,16 +1,13 @@
 ﻿using System;
 
-namespace ArxLibertatisServer.Messages
+namespace ArxLibertatisServer.Messages.Outgoing
 {
     /// <summary>
     /// sent by server to tell clients the server exited
     /// </summary>
-    [MessageType((ushort)MessageTypeEnum.AnnounceServerExit)]
-    public class AnnounceServerExit : Message
+    [MessageType(MessageTypeEnum.AnnounceServerExit)]
+    public class AnnounceServerExit : OutgoingMessage
     {
-        public override void FromBytes(byte[] bytes)
-        { }
-
         public override byte[] GetBytes()
         {
             return Array.Empty<byte>();

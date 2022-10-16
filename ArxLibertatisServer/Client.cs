@@ -1,4 +1,6 @@
 ﻿using ArxLibertatisServer.Messages;
+using ArxLibertatisServer.Messages.Incoming;
+using ArxLibertatisServer.Messages.Outgoing;
 using NLog;
 using System;
 using System.IO;
@@ -9,6 +11,8 @@ namespace ArxLibertatisServer
 {
     public class Client
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
         private readonly Server server;
         private readonly TcpClient client;
         private readonly BinaryReader reader;
@@ -20,8 +24,7 @@ namespace ArxLibertatisServer
         public Guid Id
         {
             get;
-            private set;
-        }
+        } = Guid.NewGuid();
         public string Name
         {
             get;
@@ -39,20 +42,31 @@ namespace ArxLibertatisServer
 
         public void Start()
         {
-            readerThread = new Thread(this.ReadLoop);
-            readerThread.Start();
-            //TODO should also try pinging the client occasionally to make sure he is still there
+            if (readerThread == null)
+            {
+                readerThread = new Thread(this.ReadLoop);
+                readerRunning = true;
+                readerThread.Start();
+                //TODO should also try pinging the client occasionally to make sure he is still there
+            }
         }
 
         public void Stop()
         {
-            readerRunning = false;
-            readerThread.Interrupt();
+            if (readerThread != null)
+            {
+                readerRunning = false;
+                readerThread.Interrupt();
+            }
         }
 
         public void Join()
         {
-            readerThread.Join();
+            if (readerThread != null)
+            {
+                readerThread.Join();
+                readerThread = null;
+            }
         }
 
         private void ReadLoop()
@@ -68,16 +82,31 @@ namespace ArxLibertatisServer
                 {
                     break;
                 }
+                catch (IOException)
+                {
+
+                    //remote closed socket
+                    logger.Info("Client " + Id + " left");
+                    server.DisconnectClient(this);
+                    break;
+                }
                 catch (Exception ex)
                 {
-                    LogManager.GetCurrentClassLogger().Warn(ex, "Error When Receiving Message in Client " + this);
+                    logger.Warn(ex, "Error When Receiving Message in Client " + this);
                 }
             }
         }
 
-        public void Send(Message message)
+        public void Send(OutgoingMessage message)
         {
-            MessageFrame.Send(message, writer);
+            try
+            {
+                MessageFrame.Send(message, writer);
+            }
+            catch (IOException)
+            {
+                //TODO: what now?
+            }
         }
 
         private void HandleMessage(Message msg)
@@ -85,40 +114,61 @@ namespace ArxLibertatisServer
             switch (msg)
             {
                 case Handshake handshake:
+                    logger.Info("Got Handshake, playername: " + handshake.name + " from " + Id);
                     Name = handshake.name;
-                    Id = handshake.id;
+                    logger.Info("Sending handshake answer " + Id);
+                    var answer = new HandshakeAnswer
+                    {
+                        id = Id
+                    };
+                    Send(answer);
+                    logger.Info("Broadcasting client enter");
                     var clientEnter = new AnnounceClientEnter
                     {
                         id = Id,
                         name = Name
                     };
                     server.Broadcast(clientEnter, this);
+                    logger.Info("Sending Levelchange on join");
                     lock (server.State)
                     {
-                        var levelChangeOnEnter = new LevelChange
+                        var levelChangeOnEnter = new OutgoingLevelChange
                         {
                             level = server.State.level
                         };
                         Send(levelChangeOnEnter);
                     }
                     break;
-                case LevelChange levelChange:
+                case IncomingLevelChange levelChange:
+                    logger.Info("Got LevelChange to: " + levelChange.level + " from " + Id);
                     lock (server.State)
                     {
                         if (server.State.level != levelChange.level)
                         {
                             server.State.level = levelChange.level;
-                            server.Broadcast(levelChange, this);
+                            var levelChangeOut = new OutgoingLevelChange
+                            {
+                                level = levelChange.level
+                            };
+                            server.Broadcast(levelChangeOut, this);
                         }
                     }
                     break;
                 case ByeBye _:
-                    var clientExit = new AnnounceClientExit
-                    {
-                        id = Id
-                    };
-                    server.Broadcast(clientExit, this);
+                    logger.Info("Got ByeBye from " + Id);
                     server.DisconnectClient(this);
+                    break;
+                case IncomingChatMessage incomingChatMessage:
+                    logger.Info("Got Chat Message from " + Id);
+                    var chatMessage = new OutgoingChatMessage
+                    {
+                        senderId = Id,
+                        message = incomingChatMessage.message
+                    };
+                    server.Broadcast(chatMessage, this);
+                    break;
+                default:
+                    logger.Warn("unhandled message " + msg);
                     break;
             }
         }

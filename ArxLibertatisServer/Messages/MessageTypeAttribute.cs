@@ -6,9 +6,9 @@ namespace ArxLibertatisServer.Messages
     {
         public ushort Type { get; }
 
-        public MessageTypeAttribute(ushort type)
+        public MessageTypeAttribute(MessageTypeEnum type)
         {
-            Type = type;
+            Type = (ushort)type;
         }
     }
 }

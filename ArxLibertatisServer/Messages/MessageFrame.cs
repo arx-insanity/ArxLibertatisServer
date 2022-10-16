@@ -1,10 +1,15 @@
-﻿using System.IO;
+﻿using ArxLibertatisServer.Messages.Incoming;
+using ArxLibertatisServer.Messages.Outgoing;
+using NLog;
+using System.IO;
 
 namespace ArxLibertatisServer.Messages
 {
     public static class MessageFrame
     {
-        public static void Send(Message message, BinaryWriter writer)
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        public static void Send(OutgoingMessage message, BinaryWriter writer)
         {
             byte[] messageBytes = message.GetBytes();
             uint messageLength = (uint)messageBytes.Length;
@@ -17,7 +22,7 @@ namespace ArxLibertatisServer.Messages
                 writer.Write(messageBytes);
             }
         }
-        public static Message Receive(BinaryReader reader)
+        public static IncomingMessage Receive(BinaryReader reader)
         {
             byte[] messageBytes;
             uint messageLength;
@@ -28,6 +33,7 @@ namespace ArxLibertatisServer.Messages
                 messageLength = reader.ReadUInt32();
                 messageBytes = reader.ReadBytes((int)messageLength);
             }
+            logger.Debug("Got message of type " + messageType + " with body length " + messageLength);
             return Message.CreateMessage(messageType, messageBytes);
         }
     }
