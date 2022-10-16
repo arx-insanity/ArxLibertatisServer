@@ -43,7 +43,7 @@ cd ArxLibertatisServer
 ### Compiling
 
 ```sh
-dotnet run
+dotnet build
 ```
 
 ### Running
