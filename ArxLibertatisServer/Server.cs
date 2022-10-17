@@ -40,7 +40,7 @@ namespace ArxLibertatisServer
             {
                 logger.Info("Starting Server listening on " + listener.LocalEndpoint);
                 listener.Start();
-                listener.BeginAcceptSocket(AcceptClient, listener);
+                listener.BeginAcceptTcpClient(AcceptClient, listener);
             }
         }
 
@@ -64,7 +64,7 @@ namespace ArxLibertatisServer
                 clients.Add(client);
             }
             client.Start();
-            list.BeginAcceptSocket(AcceptClient, list);
+            list.BeginAcceptTcpClient(AcceptClient, list);
         }
 
         public void DisconnectClient(Client client)
