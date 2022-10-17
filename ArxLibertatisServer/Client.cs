@@ -84,7 +84,6 @@ namespace ArxLibertatisServer
                 }
                 catch (IOException)
                 {
-
                     //remote closed socket
                     logger.Info("Client " + Id + " left");
                     server.DisconnectClient(this);
@@ -114,22 +113,22 @@ namespace ArxLibertatisServer
             switch (msg)
             {
                 case Handshake handshake:
-                    logger.Info("Got Handshake, playername: " + handshake.name + " from " + Id);
+                    logger.Debug("Got Handshake, playername: " + handshake.name + " from " + Id);
                     Name = handshake.name;
-                    logger.Info("Sending handshake answer " + Id);
+                    logger.Debug("Sending handshake answer " + Id);
                     var answer = new HandshakeAnswer
                     {
                         id = Id
                     };
                     Send(answer);
-                    logger.Info("Broadcasting client enter");
+                    logger.Debug("Broadcasting client enter");
                     var clientEnter = new AnnounceClientEnter
                     {
                         id = Id,
                         name = Name
                     };
                     server.Broadcast(clientEnter, this);
-                    logger.Info("Sending Levelchange on join");
+                    logger.Debug("Sending Levelchange on join");
                     lock (server.State)
                     {
                         var levelChangeOnEnter = new OutgoingLevelChange
@@ -140,7 +139,7 @@ namespace ArxLibertatisServer
                     }
                     break;
                 case IncomingLevelChange levelChange:
-                    logger.Info("Got LevelChange to: " + levelChange.level + " from " + Id);
+                    logger.Debug("Got LevelChange to: " + levelChange.level + " from " + Id);
                     lock (server.State)
                     {
                         if (server.State.level != levelChange.level)
@@ -155,17 +154,28 @@ namespace ArxLibertatisServer
                     }
                     break;
                 case ByeBye _:
-                    logger.Info("Got ByeBye from " + Id);
+                    logger.Debug("Got ByeBye from " + Id);
                     server.DisconnectClient(this);
                     break;
                 case IncomingChatMessage incomingChatMessage:
-                    logger.Info("Got Chat Message from " + Id);
+                    logger.Debug("Got Chat Message from " + Id);
                     var chatMessage = new OutgoingChatMessage
                     {
                         senderId = Id,
                         message = incomingChatMessage.message
                     };
                     server.Broadcast(chatMessage, this);
+                    break;
+                case IncomingChangePlayerPosition incomingPlayerPosition:
+                    logger.Debug("Got Player Position Update (" + incomingPlayerPosition.x + "," + incomingPlayerPosition.y + "," + incomingPlayerPosition.z + ") from " + Id);
+                    var positionUpdate = new OutgoingChangePlayerPosition
+                    {
+                        id = Id,
+                        x = incomingPlayerPosition.x,
+                        y = incomingPlayerPosition.y,
+                        z = incomingPlayerPosition.z
+                    };
+                    server.Broadcast(positionUpdate, this);
                     break;
                 default:
                     logger.Warn("unhandled message " + msg);
